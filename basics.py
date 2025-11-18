@@ -12,5 +12,4 @@ user_data = {
 }
 
 user = User(**user_data)
-
 print(user)
