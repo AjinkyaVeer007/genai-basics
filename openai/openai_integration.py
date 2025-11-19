@@ -1,19 +1,12 @@
 from openai import OpenAI
 from dotenv import load_dotenv
-import os
 
 load_dotenv()
 
-api_key = os.getenv("GEMINI_API_KEY")
-base_url = os.getenv("GEMINI_BASE_URL")
-
-client = OpenAI(
-    api_key=api_key,
-    base_url=base_url
-)
+client = OpenAI()
 
 res = client.chat.completions.create(
-    model="gemini-2.5-flash",
+    model="gpt-4o",
     messages=[
         {
             "role": "system",
@@ -21,7 +14,7 @@ res = client.chat.completions.create(
         },
         {
             "role": "user",
-            "content": "What is the factorial of 69"
+            "content": "what is 2+2"
         }
     ]
 )
