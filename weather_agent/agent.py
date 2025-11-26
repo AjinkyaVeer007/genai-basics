@@ -2,10 +2,18 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import random
 import json
+from pydantic import BaseModel, Field
+from typing import Optional
 
 load_dotenv()
 
 client = OpenAI()
+
+class Response_format(BaseModel):
+    step : str = Field(..., description="The ID of the step. Example -  START, PLAN, TOOL, OBSERVE, OUTPUT")
+    content : Optional[str] = Field(description="Summarised sentense for step")
+    tool : Optional[str] = Field( description="The ID of the tool to call")
+    input : Optional[str] = Field( description="Paramter required to call the tool")
 
 def get_weather(city):
     return f"Todays weather of {city} is {random.randint(10, 99)} C"
@@ -32,6 +40,7 @@ system_prompt = """
     
     Example 1 :
         START : What is the weather in mumbai?
+        PLAN : { "step" : "START", "content" : "What is the weather in mumbai?" }
         PLAN : { "step" : "PLAN", "content" : "Seems like user is interested in getting weather of mumbai" }
         PLAN : { "step" : "PLAN", "content" : "Let see if we have available tools to resolve this" }
         PLAN : { "step" : "PLAN", "content" : "Great, we have get_weather tool available for the query" }
@@ -44,6 +53,7 @@ system_prompt = """
 
     Example 2 :
         START : What is your favorite movie?
+        PLAN : { "step" : "START", "content" : "What is your favorite movie?" }
         PLAN : { "step" : "PLAN", "content" : "Seems kike user asking out of the scope question which is not relarted to weather" }
         PLAN : { "step" : "PLAN", "content" : "As rules suggest I cannot resolving out of scope questions" }
         OUTPUT : { "step" : "OUTPUT", "content" : "Hey, I am AI agent help only in giving weather related queries. Sorry for the inconvienice" }
@@ -59,36 +69,36 @@ def main():
     message_history.append({"role": "user", "content" : user_query})
 
     while True:
-        response = client.chat.completions.create(
+        response = client.chat.completions.parse(
             model="gpt-4o",
-            response_format={"type": "json_object"},
+            response_format=Response_format,
             messages=message_history
         )
 
         raw_result = response.choices[0].message.content
-        parsed_output = json.loads(raw_result)
+        parsed_output = response.choices[0].message.parsed
 
         message_history.append({"role" : "assistant", "content" :raw_result })
 
-        if parsed_output.get("step") == "START":
+        if parsed_output.step == "START":
             print(f"▶️ {parsed_output}")
             continue
 
-        if parsed_output.get("step") == "PLAN" :
+        if parsed_output.step == "PLAN" :
             print(f"🧠 {parsed_output}")
             continue
 
-        if parsed_output.get("step") == "OBSERVE" :
+        if parsed_output.step == "OBSERVE" :
             print(f"👁️ {parsed_output}")
             continue
 
-        if parsed_output.get("step") == "TOOL" :
+        if parsed_output.step == "TOOL" :
             print(f"⛏️ {parsed_output}")
-            weather = tool_mapping[parsed_output.get("tool")](parsed_output.get("input"))
+            weather = tool_mapping[parsed_output.tool](parsed_output.input)
             message_history.append({"role" : "assistant", "content" : weather})
             continue
 
-        if parsed_output.get("step") == "OUTPUT" :
+        if parsed_output.step == "OUTPUT" :
             print(f"✅ {parsed_output}")
             break
 
